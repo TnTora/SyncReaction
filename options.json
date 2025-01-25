@@ -1,0 +1,6 @@
+{
+    "pauseToSync": true,
+    "ssl": false,
+    "cache_size": 20,
+    "PORT": 8001
+}

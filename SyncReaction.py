@@ -5,7 +5,6 @@ import websockets
 import signal
 import argparse
 import time
-from datetime import timedelta, datetime
 from python_mpv_jsonipc import MPV
 import ssl
 from urllib.parse import urlparse, parse_qs
@@ -112,7 +111,7 @@ else:
         client.delay = await client.getProperty("playback-time") - mpv.playback_time
         print(f"client_id:{client.id}, delay:{client.delay}", flush=True)
         updateCache(mpv.filename + client.id, client.delay)
-        show_info(f"delay: {timedelta(seconds=client.delay)}", 2)
+        show_info(f"delay: {int(client.delay // 60)}:{round(client.delay % 60, 3)}", 2)
 
 
 # If full, delete the oldest entry before updating cache file
@@ -120,7 +119,8 @@ def updateCache(current, delay):
     if len(cache) > cache_size:
         # delete oldest entry
         cache.pop(next(iter(cache)))
-    cache[current] = [delay, datetime.now().strftime("%Y-%m-%d %H:%M")]
+    currtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time()))
+    cache[current] = [delay, currtime]
     with open(os.path.join(directory, "cache.json"), "w") as f:
         json.dump(cache, f, indent=4)
 
@@ -351,7 +351,7 @@ mpvQ = asyncio.PriorityQueue()
 def changeDelay(offSet, client):
     client.delay += offSet
     client_id = f" {client.id}" if len(clients) > 1 else ""
-    show_info(f"delay{client_id}: {str(timedelta(seconds=client.delay))}", 1000, "show-text")
+    show_info(f"delay{client_id}: {int(client.delay // 60)}:{round(client.delay % 60, 3)}", 1000, "show-text")
     client.setProperty_sync("addListener", "playback-time")
 
 

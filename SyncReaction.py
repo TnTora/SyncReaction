@@ -140,6 +140,7 @@ async def handler(websocket):
             mpvPause = mpv.bind_property_observer("core-idle", syncPause)
             mpv.bind_property_observer("speed", syncSpeed)
             mpv.bind_property_observer("eof-reached", handle_eof)
+            asyncio.create_task(periodicSyncCheck())
 
         clients[websocket.id].id = await clients[websocket.id].getProperty("url")
         clients[websocket.id].id = get_id(clients[websocket.id].id)
@@ -206,6 +207,18 @@ async def monitorMPV(queue):
                 continue
             for socket_id, client in clients.items():
                 await client.socket.send(json.dumps(msg[1]))
+        except asyncio.CancelledError:
+            raise
+
+
+async def periodicSyncCheck():
+    while True:
+        try:
+            await asyncio.sleep(60)
+            if mpv.pause:
+                continue
+            for client in clients.values():
+                await client.setProperty("addListener", "playback-time")
         except asyncio.CancelledError:
             raise
 

@@ -57,12 +57,36 @@ if use_ssl:
 else:
     ssl_context = None
 
+if not os.path.isfile(os.path.join(directory, "cache.json")):
+    with open(os.path.join(directory, "cache.json"), "w") as f:
+        json.dump({}, f)
 
 with open(os.path.join(directory, "cache.json")) as f:
-    cache = json.load(f)
+    try:
+        cache = json.load(f)
+    except ValueError:
+        cache = {}
+        json.dump(cache, f, indent=4)
+
+if not os.path.isfile(os.path.join(directory, "options.json")):
+    with open(os.path.join(directory, "options.json"), "w") as f:
+        options = {
+            "PORT": 8001,
+            "cache_size": 20,
+            "pauseToSync": True
+        }
+        json.dump(options, f, indent=4)
 
 with open(os.path.join(directory, "options.json")) as f:
-    options = json.load(f)
+    try:
+        options = json.load(f)
+    except ValueError:
+        options = {
+            "PORT": 8001,
+            "cache_size": 20,
+            "pauseToSync": True
+        }
+        json.dump(options, f, indent=4)
 
 PORT = options["PORT"]  # PORT used for websocket server
 pauseToSync = options["pauseToSync"]

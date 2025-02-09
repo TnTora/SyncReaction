@@ -20,14 +20,12 @@ from urllib.parse import urlparse, parse_qs
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--cache", action="store_true", default=False)
 parser.add_argument("-s", "--subprocess", action="store_true", default=False)
-parser.add_argument("-d", "--scriptDirectory", default=None)
 parser.add_argument("--socket", default=None)
 parser.add_argument("--ssl", action="store_true", default=False)
 
 args = parser.parse_args()
 useCached = args.cache
 subprocess = args.subprocess
-directory = args.scriptDirectory
 SOCKET = args.socket
 use_ssl = args.ssl
 
@@ -43,9 +41,44 @@ def get_id(url):
         return path_list[-1]
 
 
-# Get directory of current file directory if not provided as argument
-if directory is None:
-    directory = os.path.dirname(__file__)
+if os.name == "nt":
+    pipe = "\\\\.\\pipe\\"
+    if SOCKET is None:
+        SOCKET = "tmp\\mpvsocket"
+else:
+    pipe = ""
+    if SOCKET is None:
+        SOCKET = "/tmp/mpvsocket"
+
+while True:
+    try:
+        mpv = MPV(start_mpv=False, ipc_socket=SOCKET)
+        break
+    except Exception as e:
+        if subprocess:
+            print("Failed to start mpv.", flush=True)
+            raise SystemExit(e)
+        input(
+            f"Open video with mpv (or mpv based player) using the option --input-ipc-server={pipe+SOCKET}, then press ENTER"
+        )
+
+mpv.speed = 1
+mpv.keep_open = "always"  # Leave the player on the last frame rather then closing or moving to the next file
+mpv.video_sync = "audio"
+
+current_osd = ""
+
+current_speed = 1
+queue_priority = 0
+player_focus = None
+eof = False
+
+mpvQ = asyncio.PriorityQueue()
+
+directory = mpv.expand_path("~~/script-opts/SyncReaction")
+
+if not os.path.exists(directory):
+    os.mkdir(directory)
 
 if use_ssl:
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
@@ -57,19 +90,19 @@ if use_ssl:
 else:
     ssl_context = None
 
-if not os.path.isfile(os.path.join(directory, "cache.json")):
-    with open(os.path.join(directory, "cache.json"), "w") as f:
+if not os.path.isfile(os.path.join(directory, "SyncReaction_cache.json")):
+    with open(os.path.join(directory, "SyncReaction_cache.json"), "w") as f:
         json.dump({}, f)
 
-with open(os.path.join(directory, "cache.json")) as f:
+with open(os.path.join(directory, "SyncReaction_cache.json")) as f:
     try:
         cache = json.load(f)
     except ValueError:
         cache = {}
         json.dump(cache, f, indent=4)
 
-if not os.path.isfile(os.path.join(directory, "options.json")):
-    with open(os.path.join(directory, "options.json"), "w") as f:
+if not os.path.isfile(os.path.join(directory, "SyncReaction_options.json")):
+    with open(os.path.join(directory, "SyncReaction_options.json"), "w") as f:
         options = {
             "PORT": 8001,
             "cache_size": 20,
@@ -77,7 +110,7 @@ if not os.path.isfile(os.path.join(directory, "options.json")):
         }
         json.dump(options, f, indent=4)
 
-with open(os.path.join(directory, "options.json")) as f:
+with open(os.path.join(directory, "SyncReaction_options.json")) as f:
     try:
         options = json.load(f)
     except ValueError:
@@ -145,7 +178,7 @@ def updateCache(current, delay):
         cache.pop(next(iter(cache)))
     currtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time()))
     cache[current] = [delay, currtime]
-    with open(os.path.join(directory, "cache.json"), "w") as f:
+    with open(os.path.join(directory, "SyncReaction_cache.json"), "w") as f:
         json.dump(cache, f, indent=4)
 
 
@@ -353,38 +386,6 @@ async def checkSync(client):
         await client.setProperty("removeListener", "playback-time")
 
 
-if os.name == "nt":
-    pipe = "\\\\.\\pipe\\"
-    if SOCKET is None:
-        SOCKET = "tmp\\mpvsocket"
-else:
-    pipe = ""
-    if SOCKET is None:
-        SOCKET = "/tmp/mpvsocket"
-
-while True:
-    try:
-        mpv = MPV(start_mpv=False, ipc_socket=SOCKET)
-        break
-    except Exception:
-        input(
-            f"Open video with mpv (or mpv based player) using the option --input-ipc-server={pipe+SOCKET}, then press ENTER"
-        )
-
-mpv.speed = 1
-mpv.keep_open = "always"  # Leave the player on the last frame rather then closing or moving to the next file
-mpv.video_sync = "audio"
-
-current_osd = ""
-
-current_speed = 1
-queue_priority = 0
-player_focus = None
-eof = False
-
-mpvQ = asyncio.PriorityQueue()
-
-
 def changeDelay(offSet, client):
     client.delay += offSet
     client_id = f" {client.id}" if len(clients) > 1 else ""
@@ -428,7 +429,7 @@ def stopScript(notifyClient=True):
             loop.call_soon_threadsafe(mpvQ.put_nowait, (0, msg))
         except Exception:
             pass
-    with open(os.path.join(directory, "cache.json"), "w") as f:
+    with open(os.path.join(directory, "SyncReaction_cache.json"), "w") as f:
         json.dump(cache, f, indent=4)
     for task in asyncio.all_tasks(loop=loop):
         task.cancel()

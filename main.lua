@@ -6,6 +6,7 @@ local video_sync = mp.get_property_native("video-sync")
 local old_ipc_server = mp.get_property_native("input-ipc-server")
 local new_ipc_server
 local use_ssl = false
+local custom_python_cmd = ""
 local python_cmd
 local syncScript
 
@@ -15,6 +16,10 @@ if package.config:sub(1,1) == '/' then
 else
   python_cmd = "py"
   new_ipc_server = "\\\\.\\pipe\\tmp\\mpvsocket"
+end
+
+if custom_python_cmd then
+  python_cmd = custom_python_cmd
 end
 
 -- print(package.config:sub(1,1))

@@ -10,7 +10,7 @@ local python_cmd
 local syncScript
 
 if package.config:sub(1,1) == '/' then
-  python_cmd = "python3.11"
+  python_cmd = "python3"
   new_ipc_server = "/tmp/mpvsocket"
 else
   python_cmd = "py"

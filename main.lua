@@ -22,11 +22,6 @@ if custom_python_cmd then
   python_cmd = custom_python_cmd
 end
 
--- print(package.config:sub(1,1))
--- print(script_path)
--- print(script_path:sub(1,1))
--- print(python_cmd)
-
 local function startScript(additional_args)
   if running then
     mp.osd_message("Script already running", 2)
@@ -43,8 +38,6 @@ local function startScript(additional_args)
         python_cmd,
         script_path,
         "-s",
-        "-d",
-        mp.get_script_directory(),
         "--socket",
         new_ipc_server,
 

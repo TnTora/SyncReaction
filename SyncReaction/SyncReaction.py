@@ -8,6 +8,7 @@ import time
 from python_mpv_jsonipc import MPV
 import ssl
 from urllib.parse import urlparse, parse_qs
+from pathlib import Path
 
 # Uncomment the following 4 lines to monitor websocket connection
 
@@ -33,10 +34,10 @@ use_ssl = args.ssl
 def get_id(url):
     # Get video ID from youtube URL
     parsed_url = urlparse(url)
-    v_query = parse_qs(parsed_url.query).get('v')
+    v_query = parse_qs(parsed_url.query).get("v")
     if v_query:
         return v_query[0]
-    path_list = parsed_url.path.split('/')
+    path_list = parsed_url.path.split("/")
     if path_list:
         return path_list[-1]
 
@@ -57,7 +58,7 @@ while True:
     except Exception as e:
         if subprocess:
             print("Failed to start mpv.", flush=True)
-            raise SystemExit(e)
+            raise SystemExit(e) from e
         input(
             f"Open video with mpv (or mpv based player) using the option --input-ipc-server={pipe+SOCKET}, then press ENTER"
         )
@@ -75,34 +76,34 @@ eof = False
 
 mpvQ = asyncio.PriorityQueue()
 
-directory = mpv.expand_path("~~/script-opts/SyncReaction")
+directory = Path(mpv.expand_path("~~/script-opts/SyncReaction"))
 
-if not os.path.exists(directory):
-    os.mkdir(directory)
+if not directory.is_dir():
+    directory.mkdir(parents=True)
 
 if use_ssl:
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 
-    ssl_cert = os.path.join(directory, "fullchain.pem")
-    ssl_key = os.path.join(directory, "cert-key.pem")
+    ssl_cert = directory / "fullchain.pem"
+    ssl_key = directory / "cert-key.pem"
 
     ssl_context.load_cert_chain(ssl_cert, keyfile=ssl_key)
 else:
     ssl_context = None
 
-if not os.path.isfile(os.path.join(directory, "SyncReaction_cache.json")):
-    with open(os.path.join(directory, "SyncReaction_cache.json"), "w") as f:
+if not (directory / "SyncReaction_cache.json").is_file():
+    with open(directory / "SyncReaction_cache.json", "w") as f:
         json.dump({}, f)
 
-with open(os.path.join(directory, "SyncReaction_cache.json")) as f:
+with open(directory / "SyncReaction_cache.json") as f:
     try:
         cache = json.load(f)
     except ValueError:
         cache = {}
-        json.dump(cache, f, indent=4)
+        # json.dump(cache, f, indent=4)
 
-if not os.path.isfile(os.path.join(directory, "SyncReaction_options.json")):
-    with open(os.path.join(directory, "SyncReaction_options.json"), "w") as f:
+if not (directory / "SyncReaction_options.json").is_file():
+    with open(directory / "SyncReaction_options.json", "w") as f:
         options = {
             "PORT": 8001,
             "cache_size": 20,
@@ -110,7 +111,7 @@ if not os.path.isfile(os.path.join(directory, "SyncReaction_options.json")):
         }
         json.dump(options, f, indent=4)
 
-with open(os.path.join(directory, "SyncReaction_options.json")) as f:
+with open(directory / "SyncReaction_options.json") as f:
     try:
         options = json.load(f)
     except ValueError:
@@ -119,7 +120,7 @@ with open(os.path.join(directory, "SyncReaction_options.json")) as f:
             "cache_size": 20,
             "pauseToSync": True
         }
-        json.dump(options, f, indent=4)
+        # json.dump(options, f, indent=4)
 
 PORT = options["PORT"]  # PORT used for websocket server
 pauseToSync = options["pauseToSync"]
@@ -155,7 +156,7 @@ else:
 if useCached:
 
     async def findDelay(client):
-        if mpv.filename + client.id in cache.keys():
+        if mpv.filename + client.id in cache:
             client.delay = cache[mpv.filename + client.id][0]
         else:
             show_info("delay not found in cache")
@@ -178,15 +179,15 @@ def updateCache(current, delay):
         cache.pop(next(iter(cache)))
     currtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(time.time()))
     cache[current] = [delay, currtime]
-    with open(os.path.join(directory, "SyncReaction_cache.json"), "w") as f:
+    with open(directory / "SyncReaction_cache.json", "w") as f:
         json.dump(cache, f, indent=4)
 
 
 clients = {}
-
+sync_check_task = None
 
 async def handler(websocket):
-    global mpvPause, player_focus
+    global mpvPause, player_focus, sync_check_task
     # Code executed the first time a client connect to the server
     if websocket not in clients.values():
         clients[websocket.id] = PlayerClient(websocket)
@@ -197,7 +198,7 @@ async def handler(websocket):
             mpvPause = mpv.bind_property_observer("core-idle", syncPause)
             mpv.bind_property_observer("speed", syncSpeed)
             mpv.bind_property_observer("eof-reached", handle_eof)
-            asyncio.create_task(periodicSyncCheck())
+            sync_check_task = asyncio.create_task(periodicSyncCheck())
 
         clients[websocket.id].id = await clients[websocket.id].getProperty("url")
         clients[websocket.id].id = get_id(clients[websocket.id].id)
@@ -238,14 +239,14 @@ async def handler(websocket):
                 await checkSync(clients[websocket.id])
         elif msg["type"] == "notice":
             if msg["value"] == "clientStop":
-                if len(clients) > 1:
-                    if clients[websocket.id].main_player:
-                        clients.pop(websocket.id)
-                        clients[next(iter(clients))].main_player = True
-                    else:
-                        clients.pop(websocket.id)
-                    continue
-                stopScript(notifyClient=False)
+                if len(clients) == 1:
+                    stopScript(notifyClient=False)
+
+                if clients[websocket.id].main_player:
+                    clients.pop(websocket.id)
+                    clients[next(iter(clients))].main_player = True
+                else:
+                    clients.pop(websocket.id)
             elif msg["value"] == "focus":
                 if player_focus == websocket.id:
                     continue
@@ -257,15 +258,15 @@ async def monitorMPV(queue):
     while True:
         try:
             msg = await queue.get()
-            if "client" in msg[1].keys():
+            if "client" in msg[1]:
                 client = clients[msg[1]["client"]]
                 msg[1].pop("client")
                 await client.socket.send(json.dumps(msg[1]))
                 continue
-            for socket_id, client in clients.items():
+            for client in clients.values():
                 await client.socket.send(json.dumps(msg[1]))
         except asyncio.CancelledError:
-            raise
+            break
 
 
 async def periodicSyncCheck():
@@ -277,7 +278,7 @@ async def periodicSyncCheck():
             for client in clients.values():
                 await client.setProperty("addListener", "playback-time")
         except asyncio.CancelledError:
-            raise
+            break
 
 
 class PlayerClient:
@@ -328,7 +329,7 @@ async def checkSyncMain(client):
 
     if pauseToSync and -3 < diff < -client.accuracy:
         show_info("Syncing...", round(abs(diff)) * 1000)
-        if mpvPause in mpv.property_bindings.keys():
+        if mpvPause in mpv.property_bindings:
             mpv.unbind_property_observer(mpvPause)
         client.sleeping = True
         mpv.pause = True
@@ -405,31 +406,31 @@ def lessDelay():
 
 @mpv.on_key_press("ALT+Shift+m")
 def addDelayAll():
-    for key in clients:
-        changeDelay(0.05, clients[key])
+    for client in clients.values():
+        changeDelay(0.05, client)
 
 
 @mpv.on_key_press("ALT+Shift+n")
 def lessDelayAll():
-    for key in clients:
-        changeDelay(-0.05, clients[key])
+    for client in clients.values():
+        changeDelay(-0.05, client)
 
 
 @mpv.on_key_press("ALT+CTRL+x")
 def manualSyncCheck():
-    for key in clients:
-        clients[key].setProperty_sync("addListener", "playback-time")
+    for client in clients.values():
+        client.setProperty_sync("addListener", "playback-time")
 
 
 @mpv.on_key_press("ESC")
-def stopScript(notifyClient=True):
+def stopScript(*, notifyClient=True):
     if notifyClient:
         msg = {"type": "notice", "property": None, "value": "stopping server"}
         try:
             loop.call_soon_threadsafe(mpvQ.put_nowait, (0, msg))
         except Exception:
             pass
-    with open(os.path.join(directory, "SyncReaction_cache.json"), "w") as f:
+    with open(directory / "SyncReaction_cache.json", "w") as f:
         json.dump(cache, f, indent=4)
     for task in asyncio.all_tasks(loop=loop):
         task.cancel()
@@ -438,7 +439,7 @@ def stopScript(notifyClient=True):
 def syncPause(name, value):
     if eof:
         return
-    for socket_id, client in clients.items():
+    for client in clients.values():
         client.setProperty_sync("pause", value)
         if value:
             client.setProperty_sync("removeListener", "playback-time")
@@ -449,7 +450,7 @@ def syncPause(name, value):
 
 def syncSeeking(name, value):
     mpv.pause = True
-    for socket_id, client in clients.items():
+    for client in clients.values():
         client.setProperty_sync("playback-time", mpv.playback_time + client.delay)
 
 
@@ -462,7 +463,7 @@ def syncSpeed(name, value):
         mpv.speed = rounded_speed if rounded_speed > 0.20 else 0.25
         current_speed = mpv.speed
         print(f"set speed to {mpv.speed}", flush=True)
-        for socket_id, client in clients.items():
+        for client in clients.values():
             client.setProperty_sync("speed", mpv.speed)
             client.speed = mpv.speed
 
@@ -477,7 +478,7 @@ def handle_eof(name, value):
         for prop_id in ids:
             mpv.unbind_property_observer(prop_id)
         # print(mpv.property_bindings.keys())
-        for socket_id, client in clients.items():
+        for client in clients.values():
             client.setProperty_sync("pause", False, priority=queue_priority + 100)
             client.setProperty_sync(
                 "removeListener", "state", priority=queue_priority + 101
@@ -496,10 +497,10 @@ async def main():
     # print(f"main loop: {loop}", flush=True)
 
     if useCached:
-        show_info("Click the Sync button on your Browser")
+        show_info(f"Click the Sync button on your Browser (use_ssl: {use_ssl})")
     else:
         show_info(
-            "Manually sync the videos, then click the Sync button on your Browser",
+            f"Manually sync the videos, then click the Sync button on your Browser (use_ssl: {use_ssl})",
         )
 
     try:

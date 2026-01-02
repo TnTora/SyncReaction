@@ -25,9 +25,7 @@
     });
 
     // Declare global variables so they can be accessed outside startSync function
-    let gTime;
     let websocket;
-    let player;
     let mainVideo
 
     function sendState(evt) {

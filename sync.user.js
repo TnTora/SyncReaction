@@ -38,10 +38,11 @@
         // Try to display button untill toolbar is ready
         let toolbar = document.querySelectorAll("div.style-scope ytd-watch-metadata #top-level-buttons-computed")[0];
         const test = setInterval(function () {
+            console.log("Waiting for toolbar to load...");
             if (toolbar == null) { toolbar = document.querySelectorAll("div.style-scope ytd-watch-metadata #top-level-buttons-computed")[0]; }
             else {
                 toolbar.appendChild(div);
-                // console.log("appended");
+                console.log("Sync button appended");
                 clearInterval(test);
             };
         }, 1000);

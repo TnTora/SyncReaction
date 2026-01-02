@@ -9,7 +9,7 @@ from python_mpv_jsonipc import MPV
 import ssl
 from urllib.parse import urlparse, parse_qs
 from pathlib import Path
-from typing import Any, TYPE_CHECKING, ClassVar
+from typing import Any, TYPE_CHECKING, ClassVar, Literal
 from collections.abc import Callable
 
 if TYPE_CHECKING:
@@ -55,7 +55,7 @@ class SyncContext:
     loop: asyncio.AbstractEventLoop
     player_focus: "UUID"
     current_speed: float = 1
-    clients: dict["UUID", "PlayerClient"] = {}
+    clients: dict["UUID", "PlayerClient"] = {}  # noqa: RUF012
     sync_check_task: asyncio.Task
 
 # -------------- mpv callbacks ------------------------------------
@@ -122,7 +122,7 @@ if os.name == "nt":
 else:
     pipe = ""
     if SOCKET is None:
-        SOCKET = "/tmp/mpvsocket"
+        SOCKET = "/tmp/mpvsocket"  # noqa: S108
 
 while True:
     try:
@@ -205,15 +205,15 @@ if subprocess:
             if MpvContext.current_osd == text:
                 mpv.osd_overlay(5, "ass-events", "")
 
-    def show_info(text: str, duration: int = -1, method: str = "osd") -> None:
+    def show_info(text: str, duration: int = -1, method: Literal["osd", "show-text"] = "osd") -> None:
         if method == "osd":
             asyncio.create_task(osd_output(text, duration))
-        else:
+        elif method == "show-text":
             mpv.show_text(text, duration)
 
 else:
 
-    def show_info(text: str, duration: int = -1) -> None:
+    def show_info(text: str, duration: int = -1, method: Literal["osd", "show-text"] = "osd") -> None:
         print(text, flush=True)
 
 
@@ -326,33 +326,28 @@ async def handler(websocket: websockets.ServerConnection) -> None:
         elif msg["type"] == "notice":
             msg_handler_notice[msg["value"]](player, msg)
 
+# ---------- monitoring funcitons -----------------------------
 
 async def monitorMPV(queue: asyncio.Queue) -> None:
     while True:
-        try:
-            msg = await queue.get()
-            if "client" in msg[1]:
-                client = SyncContext.clients[msg[1]["client"]]
-                msg[1].pop("client")
-                await client.socket.send(json.dumps(msg[1]))
-                continue
-            for client in SyncContext.clients.values():
-                await client.socket.send(json.dumps(msg[1]))
-        except asyncio.CancelledError:
-            break
-
+        msg = await queue.get()
+        if "client" in msg[1]:
+            client = SyncContext.clients[msg[1]["client"]]
+            msg[1].pop("client")
+            await client.socket.send(json.dumps(msg[1]))
+            continue
+        for client in SyncContext.clients.values():
+            await client.socket.send(json.dumps(msg[1]))
 
 async def periodicSyncCheck() -> None:
     while True:
-        try:
-            await asyncio.sleep(60)
-            if mpv.pause:
-                continue
-            for client in SyncContext.clients.values():
-                await client.setProperty("addListener", "playback-time")
-        except asyncio.CancelledError:
-            break
+        await asyncio.sleep(60)
+        if mpv.pause:
+            continue
+        for client in SyncContext.clients.values():
+            await client.setProperty("addListener", "playback-time")
 
+# ---------------------------------------------------------------
 
 class PlayerClient:
     failed_find_cache: ClassVar[list[str]] = []
@@ -361,7 +356,7 @@ class PlayerClient:
         self.socket = websocket
         self.url: str
         self.id: str | None = None
-        self.delay = None
+        self.delay: float | None = None
         self.state = None
         self.playback_time = None
         self.speed = 1
@@ -520,48 +515,47 @@ class PlayerClient:
 # ------ Setup Key Bindings -------------------------------
 
 def changeDelay(offSet: float, client: "PlayerClient"):
+    if client.delay is None:
+        return
     client.delay += offSet
     client_id = f" {client.id}" if len(SyncContext.clients) > 1 else ""
     show_info(f"delay{client_id}: {int(client.delay // 60)}:{round(client.delay % 60, 3)}", 1000, "show-text")
     client.setProperty_sync("addListener", "playback-time")
 
 
-@mpv.on_key_press("ALT+m")
+@mpv.on_key_press("ALT+m", forced=True)
 def addDelay() -> None:
     changeDelay(0.05, SyncContext.clients[SyncContext.player_focus])
 
 
-@mpv.on_key_press("ALT+n")
+@mpv.on_key_press("ALT+n", forced=True)
 def lessDelay() -> None:
     changeDelay(-0.05, SyncContext.clients[SyncContext.player_focus])
 
 
-@mpv.on_key_press("ALT+Shift+m")
+@mpv.on_key_press("ALT+Shift+m", forced=True)
 def addDelayAll() -> None:
     for client in SyncContext.clients.values():
         changeDelay(0.05, client)
 
 
-@mpv.on_key_press("ALT+Shift+n")
+@mpv.on_key_press("ALT+Shift+n", forced=True)
 def lessDelayAll() -> None:
     for client in SyncContext.clients.values():
         changeDelay(-0.05, client)
 
 
-@mpv.on_key_press("ALT+CTRL+x")
+@mpv.on_key_press("ALT+CTRL+x", forced=True)
 def manualSyncCheck() -> None:
     for client in SyncContext.clients.values():
         client.setProperty_sync("addListener", "playback-time")
 
 
-@mpv.on_key_press("ESC")
+@mpv.on_key_press("ESC", forced=True)
 def stopScript(*, notifyClient: bool = True) -> None:
     if notifyClient:
         msg = {"type": "notice", "property": None, "value": "stopping server"}
-        try:  # noqa: SIM105
-            SyncContext.loop.call_soon_threadsafe(MpvContext.mpvQ.put_nowait, (0, msg))
-        except Exception:
-            pass
+        SyncContext.loop.call_soon_threadsafe(MpvContext.mpvQ.put_nowait, (0, msg))
     with open(directory / "SyncReaction_cache.json", "w") as f:
         json.dump(cache, f, indent=4)
     for task in asyncio.all_tasks(loop=SyncContext.loop):
@@ -570,9 +564,7 @@ def stopScript(*, notifyClient: bool = True) -> None:
 
 async def main() -> None:
 
-    # loop = asyncio.get_event_loop()
     SyncContext.loop = asyncio.get_running_loop()
-    # print(f"main loop: {loop}", flush=True)
 
     if useCached:
         show_info(f"Click the Sync button on your Browser (use_ssl: {use_ssl})")

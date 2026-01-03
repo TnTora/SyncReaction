@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SyncPlayers
-// @version      0.4
+// @version      0.5
 // @description  Sync playback between YouTube video and mpv
 // @match        https://www.youtube.com/*
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
@@ -13,42 +13,34 @@
     'use strict';
     const PORT = 8001;
     const protocol = "ws"
-    let div;
-    let span;
-    let button;
+    let syncButton;
     let running = false;
 
     function addButton() {
         // Check URL
         if (!window.location.pathname.startsWith("/watch")) { return }
+        syncButton = document.querySelector('#syncButton');
+        if (syncButton) { return };
 
-        // Create Button, uses the actual youtube button classes so it may need to be changed if youtube ever modify them
-        div = document.createElement("div");
-        div.setAttribute("name", "top_level_sync_btn");
-        div.className = "style-scope ytd-menu-renderer";
-        div.style.marginLeft = "8px";
-        span = document.createElement("span");
-        span.innerText = "Sync";
-        button = document.createElement("button");
-        button.className = "yt-spec-button-shape-next yt-spec-button-shape-next--tonal yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-leading ";
-        button.appendChild(span);
-        button.onclick = startSync;
-        div.appendChild(button);
+        console.log("addButton");
 
-        // Try to display button untill toolbar is ready
-        let toolbar = document.querySelectorAll("div.style-scope ytd-watch-metadata #top-level-buttons-computed")[0];
-        const test = setInterval(function () {
-            console.log("Waiting for toolbar to load...");
-            if (toolbar == null) { toolbar = document.querySelectorAll("div.style-scope ytd-watch-metadata #top-level-buttons-computed")[0]; }
-            else {
-                toolbar.appendChild(div);
-                console.log("Sync button appended");
-                clearInterval(test);
-            };
-        }, 1000);
+        // Create Button, append it to player controls
+        syncButton = document.createElement('button');
+        syncButton.id = 'syncButton';
+        syncButton.style.background = 'none';
+        syncButton.style.border = 'none';
+        syncButton.style.cursor = 'pointer';
+        syncButton.style.marginLeft = '10px';
+        syncButton.style.marginRight = '10px';
+        syncButton.style.textShadow = '0px 0px 4px black';
+        syncButton.innerText = 'Sync';
+        syncButton.style.color = '#fff';
+        syncButton.style.fontWeight = 'bold';
+        syncButton.onclick = startSync;
+
+        const controls = document.querySelector('.ytp-chrome-controls');
+        controls.appendChild(syncButton);
     };
-
-    addButton();
 
     document.addEventListener('yt-navigate-finish', () => {
         // Run the function every time you navigate to a new page
@@ -71,11 +63,11 @@
     });
 
 
-    // Declare global variables so they can be accessed outside startSync function
+    // Declare variables so they can be accessed outside startSync function
     let gTime;
     let websocket;
     let player;
-    let mainVideo
+    let mainVideo;
 
     function sendState() {
         const msg = {
@@ -125,11 +117,11 @@
 
     function startSync() {
         running = true;
-        span.innerText = "UnSync";
-        button.onclick = stopSync;
+        syncButton.innerText = "UnSync";
+        syncButton.onclick = stopSync;
         websocket = new WebSocket(`${protocol}://localhost:${PORT}/`);
-        player = document.getElementById('movie_player')
-        mainVideo = document.getElementsByClassName('html5-main-video')[0]
+        player = document.getElementById('movie_player');
+        mainVideo = document.getElementsByClassName('html5-main-video')[0];
 
 
         // Handle messages received from server
@@ -235,8 +227,8 @@
         });
 
         websocket.onclose = () => {
-            span.innerText = "Sync";
-            button.onclick = startSync;
+            syncButton.innerText = "Sync";
+            syncButton.onclick = startSync;
         };
     };
 

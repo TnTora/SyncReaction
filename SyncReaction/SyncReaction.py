@@ -373,7 +373,7 @@ class PlayerClient:
     max_diff: float = 2
     mid_diff: float = 0.2
     max_resume_attempts: int = 5
-    failed_find_cache: ClassVar[list[str]] = []
+    failed_find_cache: ClassVar[set[str]] = set()
 
     def __init__(self, websocket: websockets.ServerConnection) -> None:
         self.socket = websocket
@@ -436,13 +436,13 @@ class PlayerClient:
 
     async def find_cached_delay(self) -> None:
         if self.id is None:
-            return
+            raise ValueError("id is None")
         # if mpv.filename + self.id in cache:
         try:
             self.delay = cache[mpv.filename + self.id][0]
         except (KeyError, IndexError):
         # else:
-            PlayerClient.failed_find_cache.append(self.id)
+            PlayerClient.failed_find_cache.add(self.id)
             show_info(
             text = f"Delay not found in cache. Manually sync the videos, then click the Sync button on your Browser (use_ssl: {use_ssl})",
             duration = -1 if len(SyncContext.clients) == 0 else 10,
@@ -452,9 +452,12 @@ class PlayerClient:
             # stopScript()
 
     async def set_delay(self) -> None:
+        if self.id is None:
+            raise ValueError("id is None")
         self.delay = await self.getProperty("playback-time") - mpv.playback_time
         print(f"client_id:{self.id}, delay:{self.delay}", flush=True)
         updateCache(mpv.filename + self.id, self.delay)
+        PlayerClient.failed_find_cache.discard(self.id)
         show_info(f"delay: {int(self.delay // 60)}:{round(self.delay % 60, 3)}", 2)
 
     async def find_delay(self) -> None:

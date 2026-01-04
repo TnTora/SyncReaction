@@ -155,7 +155,7 @@ if subprocess:
 
     def show_info(text: str, duration: int = -1, method: Literal["osd", "show-text"] = "osd") -> None:
         if method == "osd":
-            asyncio.create_task(osd_output(text, duration))
+            asyncio.create_task(osd_output(text, duration))  # noqa: RUF006
         elif method == "show-text":
             mpv.show_text(text, duration)
 
@@ -531,12 +531,13 @@ class PlayerClient:
 
 # ------ Setup Key Bindings -------------------------------
 
-def changeDelay(offSet: float, client: "PlayerClient"):
+def changeDelay(offSet: float, client: "PlayerClient", *, show_msg: bool = True):
     if client.delay is None:
         return
     client.delay += offSet
     client_id = f" {client.id}" if len(SyncContext.clients) > 1 else ""
-    show_info(f"delay{client_id}: {int(client.delay // 60)}:{round(client.delay % 60, 3)}", 1000, "show-text")
+    if show_msg:
+        show_info(f"delay{client_id}: {int(client.delay // 60)}:{round(client.delay % 60, 3)}", 1000, "show-text")
     client.setProperty_sync("addListener", "playback-time")
 
 
@@ -552,14 +553,24 @@ def lessDelay() -> None:
 
 @mpv.on_key_press("ALT+Shift+m", forced=True)
 def addDelayAll() -> None:
+    msg = ""
     for client in SyncContext.clients.values():
-        changeDelay(0.05, client)
+        if client.delay is None:
+            continue
+        changeDelay(0.05, client, show_msg=False)
+        msg += f"delay {client.id}: {int(client.delay // 60)}:{round(client.delay % 60, 3)}\n"
+    show_info(msg, 1000, "show-text")
 
 
 @mpv.on_key_press("ALT+Shift+n", forced=True)
 def lessDelayAll() -> None:
+    msg = ""
     for client in SyncContext.clients.values():
-        changeDelay(-0.05, client)
+        if client.delay is None:
+            continue
+        changeDelay(-0.05, client, show_msg=False)
+        msg += f"delay {client.id}: {int(client.delay // 60)}:{round(client.delay % 60, 3)}\n"
+    show_info(msg, 1000, "show-text")
 
 
 @mpv.on_key_press("ALT+CTRL+x", forced=True)

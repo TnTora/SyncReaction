@@ -56,61 +56,7 @@ class SyncContext:
     player_focus: "UUID"
     current_speed: float = 1
     clients: dict["UUID", "PlayerClient"] = {}  # noqa: RUF012
-    sync_check_task: asyncio.Task
-
-# -------------- mpv callbacks ------------------------------------
-
-def syncPause(name: str, value: bool) -> None:  # noqa: FBT001
-    """Update clients playback state to match mpv player."""
-    if MpvContext.eof:
-        return
-    for client in SyncContext.clients.values():
-        client.setProperty_sync("pause", value)
-        if value:
-            client.setProperty_sync("removeListener", "playback-time")
-        else:
-            client.setProperty_sync("addListener", "playback-time")
-            client.accuracy = 0.05
-
-
-def syncSeeking(name: str, value: float) -> None:
-    """Update clients playback-time to match mpv player."""
-    mpv.pause = True
-    for client in SyncContext.clients.values():
-        client.setProperty_sync("playback-time", mpv.playback_time + client.delay)
-
-
-def syncSpeed(name: str, value: float) -> None:
-    """Update clients speeds to match mpv player."""
-    # Small difference in speed is allowed in order to properly sync the players
-    if abs(value - SyncContext.current_speed) > 0.15:
-        # round speed to a value available in the youtube player
-        rounded_speed = min(round(value / 0.25) * 0.25, 2)
-        mpv.speed = max(rounded_speed, 0.25)
-        SyncContext.current_speed = mpv.speed
-        print(f"set speed to {mpv.speed}", flush=True)
-        for client in SyncContext.clients.values():
-            client.setProperty_sync("speed", mpv.speed)
-            client.speed = mpv.speed
-
-
-def handle_eof(name: str, value: bool) -> None:  # noqa: FBT001
-    """Once playback is over remove all listeners except the one for the YouTube Captions."""
-    if value:
-        MpvContext.eof = True
-        ids = list(mpv.property_bindings.keys())
-        for prop_id in ids:
-            mpv.unbind_property_observer(prop_id)
-
-        for client in SyncContext.clients.values():
-            client.setProperty_sync("pause", False, priority=MpvContext.queue_priority + 100)
-            client.setProperty_sync(
-                "removeListener", "state", priority=MpvContext.queue_priority + 101
-            )
-            client.setProperty_sync(
-                "removeListener", "playback-time", priority=MpvContext.queue_priority + 102
-            )
-        stopScript()
+    tasks: dict[str, asyncio.Task] = {}  # noqa: RUF012
 
 
 # ------------- Connect to mpv -------------------------------------
@@ -227,6 +173,60 @@ def updateCache(current: str, delay: float) -> None:
     with open(directory / "SyncReaction_cache.json", "w") as f:
         json.dump(cache, f, indent=4)
 
+# -------------- mpv callbacks ------------------------------------
+
+def syncPause(name: str, value: bool) -> None:  # noqa: FBT001
+    """Update clients playback state to match mpv player."""
+    if MpvContext.eof:
+        return
+    for client in SyncContext.clients.values():
+        client.setProperty_sync("pause", value)
+        if value:
+            client.setProperty_sync("removeListener", "playback-time")
+        else:
+            client.setProperty_sync("addListener", "playback-time")
+            client.accuracy = 0.05
+
+
+def syncSeeking(name: str, value: float) -> None:
+    """Update clients playback-time to match mpv player."""
+    mpv.pause = True
+    for client in SyncContext.clients.values():
+        client.setProperty_sync("playback-time", mpv.playback_time + client.delay)
+
+
+def syncSpeed(name: str, value: float) -> None:
+    """Update clients speeds to match mpv player."""
+    # Small difference in speed is allowed in order to properly sync the players
+    if abs(value - SyncContext.current_speed) > 0.15:
+        # round speed to a value available in the youtube player
+        rounded_speed = min(round(value / 0.25) * 0.25, 2)
+        mpv.speed = max(rounded_speed, 0.25)
+        SyncContext.current_speed = mpv.speed
+        print(f"set speed to {mpv.speed}", flush=True)
+        for client in SyncContext.clients.values():
+            client.setProperty_sync("speed", mpv.speed)
+            client.speed = mpv.speed
+
+
+def handle_eof(name: str, value: bool) -> None:  # noqa: FBT001
+    """Once playback is over remove all listeners except the one for the YouTube Captions."""
+    if value:
+        MpvContext.eof = True
+        ids = list(mpv.property_bindings.keys())
+        for prop_id in ids:
+            mpv.unbind_property_observer(prop_id)
+
+        for client in SyncContext.clients.values():
+            client.setProperty_sync("pause", False, priority=MpvContext.queue_priority + 100)
+            client.setProperty_sync(
+                "removeListener", "state", priority=MpvContext.queue_priority + 101
+            )
+            client.setProperty_sync(
+                "removeListener", "playback-time", priority=MpvContext.queue_priority + 102
+            )
+        stopScript()
+
 
 # ---------- handle connections -----------------------------
 
@@ -234,9 +234,6 @@ async def add_client(websocket: websockets.ServerConnection) -> None:
     new_player = PlayerClient(websocket)
     await new_player.find_id()
     await new_player.find_delay()
-
-    # if new_player.delay is None:
-    #     return
 
     SyncContext.clients[websocket.id] = new_player
 
@@ -252,7 +249,7 @@ async def add_client(websocket: websockets.ServerConnection) -> None:
         rounded_speed = min(round(mpv.speed / 0.25) * 0.25, 2)
         mpv.speed = max(rounded_speed, 0.25)
 
-        SyncContext.sync_check_task = asyncio.create_task(periodicSyncCheck())
+        SyncContext.tasks["sync_check"] = asyncio.create_task(periodicSyncCheck())
 
     await new_player.setProperty("speed", mpv.speed)
     mpv.playback_time += 0.001
@@ -347,6 +344,17 @@ async def periodicSyncCheck() -> None:
         for client in SyncContext.clients.values():
             await client.setProperty("addListener", "playback-time")
 
+async def check_connection() -> None:
+    while True:
+        try:
+            mpv.command("client_name")
+            await asyncio.sleep(5)
+        except BrokenPipeError:  # noqa: PERF203
+            import sys  # noqa: PLC0415
+            print("Connection to mpv dropped. Terminating script...", flush=True)
+            mpv.terminate()
+            sys.exit()
+
 # ---------------------------------------------------------------
 
 class PlayerClient:
@@ -411,7 +419,6 @@ class PlayerClient:
         self.url = await self.getProperty("url")
         self.id = self.get_id_from_url(self.url)
 
-
     async def find_cached_delay(self) -> None:
         if self.id is None:
             return
@@ -429,7 +436,6 @@ class PlayerClient:
             # await asyncio.sleep(1)
             # stopScript()
 
-
     async def set_delay(self) -> None:
         self.delay = await self.getProperty("playback-time") - mpv.playback_time
         print(f"client_id:{self.id}, delay:{self.delay}", flush=True)
@@ -441,9 +447,6 @@ class PlayerClient:
             await self.set_delay()
         else:
             await self.find_cached_delay()
-
-
-
 
     async def check_sync_main(self) -> None:
 
@@ -484,7 +487,6 @@ class PlayerClient:
             self.accuracy = self.original_accuracy
         else:
             await self.setProperty("removeListener", "playback-time")
-
 
     async def check_sync_sub(self) -> None:
 
@@ -564,6 +566,8 @@ def stopScript(*, notifyClient: bool = True) -> None:
 
 async def main() -> None:
 
+    SyncContext.tasks["conn_check"] = asyncio.create_task(check_connection())
+
     SyncContext.loop = asyncio.get_running_loop()
 
     if useCached:
@@ -587,9 +591,10 @@ async def main() -> None:
 
             mpv.quit_callback = stopScript
 
-            task = asyncio.create_task(monitorMPV(MpvContext.mpvQ))
+            main_task = asyncio.create_task(monitorMPV(MpvContext.mpvQ))
+            SyncContext.tasks["main"] = main_task
             try:  # noqa: SIM105
-                await task
+                await main_task
             except asyncio.CancelledError:
                 pass
             mpv.terminate()

@@ -5,10 +5,12 @@ import websockets
 import signal
 import argparse
 import time
-from python_mpv_jsonipc import MPV
 import ssl
+from python_mpv_jsonipc import MPV
 from urllib.parse import urlparse, parse_qs
 from pathlib import Path
+from enum import Enum
+
 from typing import Any, TYPE_CHECKING, ClassVar, Literal
 from collections.abc import Callable
 
@@ -198,7 +200,7 @@ def syncSeeking(name: str, value: float) -> None:
 def syncSpeed(name: str, value: float) -> None:
     """Update clients speeds to match mpv player."""
     # Small difference in speed is allowed in order to properly sync the players
-    if abs(value - SyncContext.current_speed) > 0.15:
+    if abs(value - SyncContext.current_speed) > 0.15:  # noqa: PLR2004
         # round speed to a value available in the youtube player
         rounded_speed = min(round(value / 0.25) * 0.25, 2)
         mpv.speed = max(rounded_speed, 0.25)
@@ -261,17 +263,17 @@ def handle_set_pause(player: "PlayerClient", msg: Any) -> None:
     if player.delay is None:
         return
 
-    if msg["value"] == 1:
+    if PlayerStatus(msg["value"]) == PlayerStatus.PLAYING:
         mpv.pause = False
         player.buffering_resume_attempts = 0
-    elif msg["value"] == 3 and player.buffering_resume_attempts < 5:
+    elif PlayerStatus(msg["value"]) == PlayerStatus.BUFFERING and player.buffering_resume_attempts < PlayerClient.max_resume_attempts:
         player.setProperty_sync("pause", False)
         player.buffering_resume_attempts += 1
     else:
         mpv.pause = True
         player.buffering_resume_attempts = 0
 
-    player.state = msg["value"]
+    player.state = PlayerStatus(msg["value"])
 
 def handle_set_speed(player: "PlayerClient", msg: Any) -> None:
     mpv.speed = float(msg["value"])
@@ -357,7 +359,20 @@ async def check_connection() -> None:
 
 # ---------------------------------------------------------------
 
+class PlayerStatus(Enum):
+    PLAYING: int = 1
+    PAUSED: int = 0
+    BUFFERING: int = 3
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.PAUSED
+
 class PlayerClient:
+
+    max_diff: float = 2
+    mid_diff: float = 0.2
+    max_resume_attempts: int = 5
     failed_find_cache: ClassVar[list[str]] = []
 
     def __init__(self, websocket: websockets.ServerConnection) -> None:
@@ -455,7 +470,7 @@ class PlayerClient:
 
         diff = self.playback_time - mpv.playback_time - self.delay
 
-        if Options.pause_to_sync and -3 < diff < -self.accuracy:
+        if Options.pause_to_sync and -PlayerClient.max_diff < diff < -self.accuracy:
             show_info("Syncing...", round(abs(diff)) * 1000)
             if MpvContext.mpv_pause_binding in mpv.property_bindings:
                 mpv.unbind_property_observer(MpvContext.mpv_pause_binding)
@@ -467,11 +482,11 @@ class PlayerClient:
                 MpvContext.mpv_pause_binding = mpv.bind_property_observer("pause", syncPause)
             self.sleeping = False
             self.accuracy = 0.05
-        elif abs(diff) > 2:
+        elif abs(diff) > PlayerClient.max_diff:
             mpv.pause = True
             show_info(f"diff: {round(diff, 6)} seeking")
             await self.setProperty("playback-time", mpv.playback_time + self.delay)
-        elif abs(diff) > 0.2:
+        elif abs(diff) > PlayerClient.mid_diff:
             speed_modifier = (diff / abs(diff)) * 0.05
             mpv.speed = self.speed + speed_modifier
             show_info(f"diff: {round(diff, 6)};   speed: {mpv.speed}")
@@ -492,11 +507,11 @@ class PlayerClient:
 
         diff = mpv.playback_time + self.delay - self.playback_time
 
-        if abs(diff) > 2:
+        if abs(diff) > PlayerClient.max_diff:
             mpv.pause = True
             show_info(f"sub_player diff: {round(diff, 6)} seeking")
             await self.setProperty("playback-time", mpv.playback_time + self.delay)
-        elif abs(diff) > 0.2:
+        elif abs(diff) > PlayerClient.mid_diff:
             speed_modifier = (diff / abs(diff)) * 0.05
             await self.setProperty("speedOffset", speed_modifier)
             show_info(f"sub_player diff: {round(diff, 6)};   speed: {mpv.speed+speed_modifier}")

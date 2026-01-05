@@ -76,10 +76,6 @@ local function searchCache()
   startScript({"-c"})
 end
 
-local function fullSubsControl()
-  startScript({"-f"})
-end
-
 local function stopScript()
   if running then
     mp.abort_async_command(syncScript)
@@ -95,5 +91,4 @@ end)
 
 mp.add_forced_key_binding("CTRL+ALT+s", "startsync", sync, {repeatable=true})
 mp.add_forced_key_binding("CTRL+ALT+c", "searchCache", searchCache, {repeatable=true})
-mp.add_forced_key_binding("CTRL+ALT+f", "fullSubsControl", fullSubsControl, {repeatable=true})
 mp.add_forced_key_binding("CTRL+ALT+a", "stopScript", stopScript, {repeatable=true})

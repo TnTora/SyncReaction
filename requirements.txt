@@ -1,0 +1,2 @@
+python-mpv-jsonipc @ git+https://github.com/TnTora/python-mpv-jsonipc.git
+websockets>=15.0.1

@@ -55,7 +55,7 @@ Locate your mpv config folder. It is typically found at `~/.config/mpv/` on Linu
 
 Place the `SyncReaction` folder inside the `scripts` folder in `<mpv config directory>`. If it doesn't exist you should create it.
 
-If you don't already have python 3.10 or above installed on your machine, install it. On Window make sure python is added to PATH.
+If you don't already have python 3.10 or above installed on your machine, install it. On Windows make sure python is added to PATH.
 
 >**Optional:** Create and activate a [virtual environment](https://docs.python.org/3/library/venv.html) in `<mpv config directory>`. While optional, it is highly reccomended to keep the script isolated from the system python.
 >

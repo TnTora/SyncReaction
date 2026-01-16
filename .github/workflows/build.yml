@@ -18,7 +18,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12' # Version range or exact version of a Python version to use, using SemVer's version range syntax
+          python-version: '3.13' # Version range or exact version of a Python version to use, using SemVer's version range syntax
           architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
           cache: 'pip'
           cache-dependency-path: |
@@ -33,7 +33,9 @@ jobs:
         with:
           nuitka-version: main
           script-name: SyncReaction/SyncReaction.py
-          mode: onefile
+          mode: standalone
+          include-module: websockets.asyncio
+          include-module: python_mpv_jsonipc
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -42,4 +44,5 @@ jobs:
           path: | # match what's created for the 3 OSes
             build/*.exe
             build/*.bin
+            dist
           include-hidden-files: true

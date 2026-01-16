@@ -39,5 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }} ${{ runner.arch }} Build
-          path: build
+          path: | # match what's created for the 3 OSes
+            build/*.exe
+            build/*.bin
           include-hidden-files: true

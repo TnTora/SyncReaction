@@ -38,6 +38,6 @@ jobs:
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }} Build
+          name: ${{ runner.os }} ${{ runner.arch }} Build
           path: build
           include-hidden-files: true

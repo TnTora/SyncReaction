@@ -34,15 +34,12 @@ jobs:
           nuitka-version: main
           script-name: SyncReaction/SyncReaction.py
           mode: standalone
-          include-module: websockets.asyncio
+          include-package: websockets
           include-module: python_mpv_jsonipc
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ runner.os }} ${{ runner.arch }} Build
-          path: | # match what's created for the 3 OSes
-            build/*.exe
-            build/*.bin
-            dist
+          path: build
           include-hidden-files: true

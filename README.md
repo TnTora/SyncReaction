@@ -50,6 +50,9 @@ While the script is running you can perform small adjustment to the delay using 
 |Alt+m       |addDelay       | add 0.05 to delay |
 ## Installation
 
+# WARNING: This section is under construction and as such might be missing necessary information.
+
+
 ### Setup mpv script 
 Locate your mpv config folder. It is typically found at `~/.config/mpv/` on Linux/MacOS and `\%APPDATA%\mpv\` on Windows.  [Files section](https://mpv.io/manual/master/#files) in mpv's manual for more info. I will refer to the path of this folder as `<mpv config directory>` for the rest of this file.
 

@@ -115,7 +115,7 @@ Install a userscript manager extension on your browser. I have tested [Tampermon
 
 Install `sync.user.js` for use on YouTube (stable) or `sync_general.user.js` for general html5 videos (alpha, does not work on Safari).
 
-Either download the file and drop it on the correct extension page or open the raw file here on github ([youtube](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync.user.js?token=GHSAT0AAAAAADSREL4LFN3MDZZHF4ERZMGY2K5WUIA), [general](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync_general.user.js?token=GHSAT0AAAAAADSREL4KW2B2SUWGJAUYGELA2K5WVJQ)) and the extension should propt you to install with either a popup or an option in the extension icon tray.
+Either download the file and drop it on the correct extension page or open the raw file here on github ([youtube](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync.user.js), [general](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync_general.user.js)) and the extension should propt you to install with either a popup or an option in the extension icon tray.
 
 You might need to grant permission to access the web page the first time the userscript runs.
 

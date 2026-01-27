@@ -212,21 +212,13 @@ def syncSpeed(name: str, value: float) -> None:
 
 
 def handle_eof(name: str, value: bool) -> None:  # noqa: FBT001
-    """Once playback is over remove all listeners except the one for the YouTube Captions."""
+    """Handle end of file mpv event."""
     if value:
         MpvContext.eof = True
-        ids = list(mpv.property_bindings.keys())
-        for prop_id in ids:
-            mpv.unbind_property_observer(prop_id)
 
         for client in SyncContext.clients.values():
             client.setProperty_sync("pause", False, priority=MpvContext.queue_priority + 100)
-            client.setProperty_sync(
-                "removeListener", "state", priority=MpvContext.queue_priority + 101
-            )
-            client.setProperty_sync(
-                "removeListener", "playback-time", priority=MpvContext.queue_priority + 102
-            )
+
         stopScript()
 
 
@@ -237,9 +229,7 @@ async def add_client(websocket: websockets.ServerConnection) -> None:
     await new_player.find_id()
     await new_player.find_delay()
 
-    SyncContext.clients[websocket.id] = new_player
-
-    if len(SyncContext.clients) == 1:
+    if len(SyncContext.clients) == 0:
         new_player.set_main(True)
         SyncContext.player_focus = websocket.id
 
@@ -252,9 +242,13 @@ async def add_client(websocket: websockets.ServerConnection) -> None:
         mpv.speed = max(rounded_speed, 0.25)
 
         SyncContext.tasks["sync_check"] = asyncio.create_task(periodicSyncCheck())
+    elif len(SyncContext.clients) == 1:
+        SyncContext.clients[next(iter(SyncContext.clients))].set_main(False)
 
     await new_player.setProperty("speed", mpv.speed)
     mpv.playback_time += 0.001
+
+    SyncContext.clients[websocket.id] = new_player
 
     print("current: ", mpv.filename + new_player.id, flush=True)
     show_info("Connected", 1)
@@ -284,7 +278,7 @@ def handle_clientStop(player: "PlayerClient", msg: Any) -> None:
         return
 
     SyncContext.clients.pop(player.socket.id)
-    if player.main_player:
+    if len(SyncContext.clients) == 1:
         SyncContext.clients[next(iter(SyncContext.clients))].set_main(True)
 
 def handle_focus(player: "PlayerClient", msg: Any) -> None:
@@ -418,6 +412,12 @@ class PlayerClient:
             self.check_sync = self.check_sync_main
         else:
             self.check_sync = self.check_sync_sub
+
+    # async def check_sync(self) -> None:
+    #     if len(SyncContext.clients) == 1:
+    #         await self.check_sync_main()
+    #     else:
+    #         await self.check_sync_sub()
 
     @staticmethod
     def get_id_from_url(url: str) -> str | None:

@@ -5,7 +5,7 @@ local script_path = utils.join_path(mp.get_script_directory(), "SyncReaction.py"
 local running = false
 local video_sync = mp.get_property_native("video-sync")
 local old_ipc_server = mp.get_property_native("input-ipc-server")
-local new_ipc_server
+local new_ipc_server = "/tmp/mpvsocket"
 local use_ssl = false
 local custom_python_cmd
 local python_cmd
@@ -13,16 +13,17 @@ local bin_path
 local default_venv_bin
 local syncScript
 
+
 if package.config:sub(1,1) == '/' then
   python_cmd = "python3"
   bin_path = utils.join_path(mp.get_script_directory(), "bin/SyncReaction.bin")
   default_venv_bin = mp.command_native({"expand-path", "~~/.mpv_venv/bin/python"})
-  new_ipc_server = "/tmp/mpvsocket"
+  -- new_ipc_server = "/tmp/mpvsocket"
 else
   python_cmd = "py"
   bin_path = utils.join_path(mp.get_script_directory(), "bin/SyncReaction.exe")
   default_venv_bin = mp.command_native({"expand-path", "~~/.mpv_venv/Scripts/python.exe"})
-  new_ipc_server = "\\\\.\\pipe\\tmp\\mpvsocket"
+  -- new_ipc_server = "\\\\.\\pipe\\tmp\\mpvsocket"
 end
 
 if utils.file_info(bin_path) == nil then

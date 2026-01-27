@@ -63,14 +63,8 @@ class SyncContext:
 
 # ------------- Connect to mpv -------------------------------------
 
-if os.name == "nt":
-    pipe = "\\\\.\\pipe\\"
-    if SOCKET is None:
-        SOCKET = "tmp\\mpvsocket"
-else:
-    pipe = ""
-    if SOCKET is None:
-        SOCKET = "/tmp/mpvsocket"  # noqa: S108
+if SOCKET is None:
+    SOCKET = "/tmp/mpvsocket"  # noqa: S108
 
 while True:
     try:
@@ -81,7 +75,7 @@ while True:
             print("Failed to start mpv.", flush=True)
             raise SystemExit(e) from e
         input(
-            f"Open video with mpv (or mpv based player) using the option --input-ipc-server={pipe+SOCKET}, then press ENTER"
+            f"Open video with mpv (or mpv based player) using the option --input-ipc-server={SOCKET}, then press ENTER"
         )
 
 mpv.keep_open = "always"  # Leave the player on the last frame rather then closing or moving to the next file

@@ -52,32 +52,25 @@ While the script is running you can perform small adjustment to the delay using 
 
 # WARNING: This section is under construction and as such might be missing necessary information.
 
-
-### Setup mpv script 
 Locate your mpv config folder. It is typically found at `~/.config/mpv/` on Linux/MacOS and `\%APPDATA%\mpv\` on Windows.  [Files section](https://mpv.io/manual/master/#files) in mpv's manual for more info. I will refer to the path of this folder as `<mpv config directory>` for the rest of this file.
 
-Place the `SyncReaction` folder inside the `scripts` folder in `<mpv config directory>`. If it doesn't exist you should create it.
+To install the mpv script you can either use the precompiled binaries without having to install anything else. Otherwise you can setup a python environent to run the script. Binaries have not been thoroughly tested, open an Issue if you encounter any problem.
+
+### Setup mpv script using compiled binaries
+- Download the build version matching your system from the Release page and extract its contents
+- Place the `SyncReaction` folder inside the `scripts` folder in `<mpv config directory>`. If it doesn't exist you should create it.
+
+### Setup mpv script using python script
+
+- Download the source code from Release section.
+
+- Place the `SyncReaction` folder inside the `scripts` folder in `<mpv config directory>`. If it doesn't exist you should create it.
 
 If you don't already have python 3.10 or above installed on your machine, install it. On Windows make sure python is added to PATH.
 
->**Optional:** Create and activate a [virtual environment](https://docs.python.org/3/library/venv.html) in `<mpv config directory>`. While optional, it is highly reccomended to keep the script isolated from the system python.
+>**Optional:** Create and activate a [virtual environment](https://docs.python.org/3/library/venv.html) named `.mpv_venv` in `<mpv config directory>`. While optional, it is highly reccomended to keep the script isolated from the system python.
 >
-> Locate the python executable within the virtual environment folder.
->
-> Open `main.lua` in a text editor and modify the `custom_python_cmd` as follows:
->
-> *Change `.mpv_venv` to the name of the virtual environment you created.*
->
->Linux/MacOS
->```
-> local custom_python_cmd = mp.command_native({"expand-path", "~~/.mpv_venv/bin/python"})
->```
->Windows
->```
-> local custom_python_cmd = mp.command_native({"expand-path", "~~/.mpv_venv/Scripts/python.exe"})
->```
->
-> If this does not work just set the variable to the full absolute path of the executable.
+> If you chose a different name for the virtual environment or you want to use a different version of pyhton, open `main.lua` in a text editor and set the `custom_python_cmd` variable to a string containing your preferred command or path to binary.
 
 Install dependencies (substitute `/` with `\` if you are on Windows)
 
@@ -94,7 +87,7 @@ pip install -r requirement.txt
 
 ### Change Keybindings
 
-Open the input.conf file in mpv config folder. Create it if it does not exist.
+Open the input.conf file in mpv config folder using a text editor. Create it if it does not exist.
 
 Add the following text after changing the keybindings to your preferred ones:
 
@@ -115,7 +108,7 @@ Install a userscript manager extension on your browser. I have tested [Tampermon
 
 Install `sync.user.js` for use on YouTube (stable) or `sync_general.user.js` for general html5 videos (alpha, does not work on Safari).
 
-Either download the file and drop it on the correct extension page or open the raw file here on github ([youtube](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync.user.js), [general](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync_general.user.js)) and the extension should propt you to install with either a popup or an option in the extension icon tray.
+Either use the file from the release and drop it on the correct extension page or open the raw file here on github ([youtube](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync.user.js), [general](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync_general.user.js)) and the extension should propt you to install with either a popup or an option in the extension icon tray.
 
 You might need to grant permission to access the web page the first time the userscript runs.
 

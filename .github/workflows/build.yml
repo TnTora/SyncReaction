@@ -26,7 +26,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r SyncReaction/requirements.txt
 
       - name: Build Executable
         uses: Nuitka/Nuitka-Action@main

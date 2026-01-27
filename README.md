@@ -12,12 +12,12 @@ https://github.com/user-attachments/assets/e4cde6ee-8235-43e9-ae24-1b29ad27b0af
 
 ## Usage
 
-Open both the YouTube video and mpv. If the userscript is running correctly you will notice a `Sync` option among the player controls, to the right of the fullscreen button.
+Open both the YouTube video and mpv. If the userscript is running correctly you will notice a `Sync` option among the YouTube player controls, to the right of the fullscreen button.
 
 <img width="253" height="33" alt="sync" src="https://github.com/user-attachments/assets/bd8937ef-f0c4-4d4d-852a-2786d83e122f" />
 
 
-On mpv use one of the following keybindigs to interact with the python script. They are purposely complex as to not overwrite already existing user defined ones. If you want to modify them check the `Change Keybindings` section below.
+On mpv, use one of the following keybindigs to interact with the python script. They are purposely complex as to not overwrite already existing user defined ones. If you want to modify them check the `Change Keybindings` section below.
 
 | Keybinding | Function name | Description |
 |------------|---------------|-------------|
@@ -50,9 +50,9 @@ While the script is running you can perform small adjustment to the delay using 
 |Alt+m       |addDelay       | add 0.05 to delay |
 ## Installation
 
-# WARNING: This section is under construction and as such might be missing necessary information.
+There are two parts to this project that you need to install: the mpv script and a userscript to interact with the browser. The following sections will guide you through the setup process. 
 
-Locate your mpv config folder. It is typically found at `~/.config/mpv/` on Linux/MacOS and `\%APPDATA%\mpv\` on Windows.  [Files section](https://mpv.io/manual/master/#files) in mpv's manual for more info. I will refer to the path of this folder as `<mpv config directory>` for the rest of this file.
+Locate your mpv config folder. It is typically found at `~/.config/mpv/` on Linux/MacOS and `C:\users\USERNAME\AppData\Roaming\mpv\` on Windows.  [Files section](https://mpv.io/manual/master/#files) in mpv's manual for more info. I will refer to the path of this folder as `<mpv config directory>` for the rest of this file.
 
 To install the mpv script you can either use the precompiled binaries without having to install anything else. Otherwise you can setup a python environent to run the script. Binaries have not been thoroughly tested, open an Issue if you encounter any problem.
 
@@ -102,13 +102,18 @@ Ctrl+Alt+g              script-binding SyncReaction/toggle_ssl
 
 > **NOTE: If you are not using the [standard mpv build](https://mpv.io/installation/), your player might ignore the `input.conf` file (e.g. [mpv.net](https://github.com/mpvnet-player/mpv.net), [IINA](https://iina.io/)) so you might need to use the in-app options to change the keybindings.**
 
-### Userscript
+### Install Userscript
 
 Install a userscript manager extension on your browser. I have tested [Tampermonkey](https://www.tampermonkey.net/) on Firefox/Chromium and [Userscripts](https://github.com/quoid/userscripts) on Safari.
 
+On Chromium based browsers you may need to enable `Allow user scripts` in `Manage Extensions` -> `Tampermonkey`.
+
+<img width="674" height="308" alt="tampermonkey_options" src="https://github.com/user-attachments/assets/8dc328db-847c-47e6-b75c-224809f7661b" /><br>
+
+
 Install `sync.user.js` for use on YouTube (stable) or `sync_general.user.js` for general html5 videos (alpha, does not work on Safari).
 
-Either use the file from the release and drop it on the correct extension page or open the raw file here on github ([youtube](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync.user.js), [general](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync_general.user.js)) and the extension should propt you to install with either a popup or an option in the extension icon tray.
+Either use the file from the release and drop it on the correct extension page or open the raw file here on github by clicking one the following links: [youtube](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync.user.js), [general](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync_general.user.js); the extension should propt you to install with either a popup or an option in the extension icon tray.
 
 You might need to grant permission to access the web page the first time the userscript runs.
 

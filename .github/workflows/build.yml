@@ -43,6 +43,12 @@ jobs:
       - name: Remove build files
         run: rm -r build
 
+      - name: Install pip-licenses
+        run: pip install pip-licenses
+
+      - name: Generate THIRDPARTY_LICENSES FILE
+        run: pip-licenses --format=plain-vertical --with-license-file --no-license-path --output-file=THIRDPARTY_LICENSES.txt --ignore-packages zstandard Nuitka ordered-set
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:

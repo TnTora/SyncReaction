@@ -22,11 +22,11 @@ jobs:
           architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
           cache: 'pip'
           cache-dependency-path: |
-            **/SyncReaction/requirements*.txt
+            **/requirements*.txt
 
       - name: Install Dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r SyncReaction/requirements.txt
 
       - name: Build Executable
         uses: Nuitka/Nuitka-Action@main

@@ -1,3 +1,6 @@
 .DS_Store
 cache.json
 __pycache__
+*.build
+*.dist
+*.lock

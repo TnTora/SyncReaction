@@ -60,6 +60,12 @@ To install the mpv script you can either use the precompiled binaries without ha
 - Download the build version matching your system from the Release page and extract its contents
 - Place the `SyncReaction` folder inside the `scripts` folder in `<mpv config directory>`. If it doesn't exist you should create it.
 
+- If you are on macOS you may need to run the following command in Terminal to allow the system to run the sctipt since it is not signed:
+  ```
+  xattr -dr com.apple.quarantine ~/.config/mpv/scripts/SyncReaction/bin
+  ```
+Running the script for the first time might take a while so if nothing seems to happen just wait. Afterwards it should start almost instantly.
+
 ### Setup mpv script using python script
 
 - Download the source code from Release section.
@@ -134,3 +140,5 @@ Take the `cert-key.pem` and `fullchain.pem` files that you generated and place t
 |------|---------|
 | [websockets](https://github.com/python-websockets/websockets) | [BSD 3-Clause](https://github.com/python-websockets/websockets/blob/main/LICENSE) |
 | [python-mpv-jsonipc](https://github.com/TnTora/python-mpv-jsonipc) (TnTora) <br> forked from [python-mpv-jsonipc](https://github.com/iwalton3/python-mpv-jsonipc) (iwalton3) | [Apache-2.0](https://github.com/TnTora/python-mpv-jsonipc/blob/master/LICENSE.md) |
+
+Binaries are compiled using [Nuitka](https://github.com/Nuitka/Nuitka).

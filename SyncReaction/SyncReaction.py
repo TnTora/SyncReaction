@@ -1,18 +1,18 @@
-import asyncio
-import os
-import json
-import websockets
-import signal
 import argparse
-import time
+import asyncio
+import json
+import os
+import signal
 import ssl
-from python_mpv_jsonipc import MPV
-from urllib.parse import urlparse, parse_qs
-from pathlib import Path
-from enum import Enum
-
-from typing import Any, TYPE_CHECKING, ClassVar, Literal
+import time
 from collections.abc import Callable
+from enum import Enum
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from urllib.parse import parse_qs, urlparse
+
+import websockets
+from python_mpv_jsonipc import MPV
 
 if TYPE_CHECKING:
     from uuid import UUID

@@ -80,6 +80,7 @@ while True:
 
 mpv.keep_open = "always"  # Leave the player on the last frame rather then closing or moving to the next file
 mpv.video_sync = "audio"
+mpv.show_text("") # Remove script loading message
 
 # ------- Get script directory -----------------------------
 

@@ -73,6 +73,8 @@ local function startScript(additional_args)
       table.insert(arguments, "--ssl")
     end
 
+    mp.osd_message("Loading SyncReaction script...", 6000)
+
     syncScript = mp.command_native_async({
         name = "subprocess",
         playback_only = true,

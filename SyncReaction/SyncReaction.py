@@ -349,9 +349,9 @@ async def check_connection() -> None:
 # ---------------------------------------------------------------
 
 class PlayerStatus(Enum):
-    PLAYING: int = 1
-    PAUSED: int = 0
-    BUFFERING: int = 3
+    PLAYING = 1
+    PAUSED = 0
+    BUFFERING = 3
 
     @classmethod
     def _missing_(cls, value):
@@ -371,7 +371,7 @@ class PlayerClient:
         self.delay: float | None = None
         self.state = None
         self.playback_time = None
-        self.speed = 1
+        self.speed: int | float = 1
         self.main_player = False
         self.sleeping = False
         self.accuracy = 0.15  # (0.06-0.19) deviation from sync before the script starts small correction

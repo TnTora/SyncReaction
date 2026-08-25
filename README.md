@@ -121,7 +121,7 @@ On Chromium based browsers you may need to enable `Allow user scripts` in `Manag
 <img width="674" height="308" alt="tampermonkey_options" src="https://github.com/user-attachments/assets/8dc328db-847c-47e6-b75c-224809f7661b" /><br>
 
 
-Install `sync.user.js` for use on YouTube (stable) or `sync_general.user.js` for general html5 videos (alpha, does not work on Safari).
+Install `sync.user.js` for use on YouTube or `sync_general.user.js` for general html5 videos.
 
 Either use the file from the release and drop it on the correct extension page or open the raw file here on github by clicking one the following links: [youtube](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync.user.js), [general](https://raw.githubusercontent.com/TnTora/SyncReaction/refs/heads/main/sync_general.user.js); the extension should propt you to install with either a popup or an option in the extension icon tray.
 
@@ -142,7 +142,7 @@ Open `main.lua` in a text editor and change `use_ssl` to `true`
 
 ## TODO
 
-- [ ] Finish implementation of general html5 video userscript
+- [ ] Improve implementation of general html5 video userscript
 - [ ] Improve setup process
 - [ ] Add option to modify settings directly from mpv
 - [ ] Expose new options to users to easily modify accuracy and frequency of sync checks 

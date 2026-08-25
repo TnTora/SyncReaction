@@ -1,11 +1,9 @@
 // ==UserScript==
 // @name         SyncPlayers-general
-// @version      0.4
+// @version      0.5
 // @description  Sync playback between html5 video and mpv
 // @match        https://*/*
 // @icon         data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
-// @grant        GM_registerMenuCommand
-// @grant        GM_unregisterMenuCommand
 // @run-at       document-idle
 // @noframes
 // ==/UserScript==
@@ -15,7 +13,33 @@
     const PORT = 8001;
     const protocol = "ws"
     let running = false;
-    let mn = GM_registerMenuCommand("Sync", startSync);
+    let syncButton;
+
+    function addButton() {
+
+        syncButton = document.querySelector('#syncButtonGeneral');
+        if (syncButton) { return };
+
+        console.log("addButton");
+
+        // Create Button, append it to player controls
+        syncButton = document.createElement('button');
+        syncButton.id = 'syncButtonGeneral';
+        syncButton.style.position = 'fixed';
+        syncButton.style.bottom = '10px';
+        syncButton.style.right = '10px';
+        syncButton.style.padding = '5px 10px';
+        syncButton.style.background = '#2b2b2b';
+        syncButton.style.border = '1px solid #474747';
+        syncButton.style.borderRadius = '100px';
+        syncButton.style.cursor = 'pointer';
+        syncButton.innerText = 'Sync';
+        syncButton.style.color = '#fff';
+        syncButton.style.fontWeight = 'bold';
+        syncButton.onclick = startSync;
+
+        document.body.appendChild(syncButton);
+    };
 
     window.addEventListener('beforeunload', function (e) {
         // Stop the script if it is still running while the window is being closed
@@ -23,6 +47,12 @@
             stopSync();
         };
     });
+
+    let videos = document.getElementsByTagName('video');
+
+    if (videos.length === 0) { return; }
+
+    addButton();
 
     // Declare global variables so they can be accessed outside startSync function
     let websocket;
@@ -84,8 +114,8 @@
 
     function startSync() {
         running = true;
-        GM_unregisterMenuCommand(mn);
-        mn = GM_registerMenuCommand("UnSync", stopSync);
+        syncButton.innerText = 'UnSync';
+        syncButton.onclick = stopSync;
         websocket = new WebSocket(`${protocol}://localhost:${PORT}/`);
         mainVideo = document.getElementsByTagName('video')[0];
         console.log(document.getElementsByTagName('video'));
@@ -191,8 +221,8 @@
         });
 
         websocket.onclose = () => {
-            GM_unregisterMenuCommand(mn);
-            mn = GM_registerMenuCommand("Sync", startSync);
+            syncButton.innerText = "Sync";
+            syncButton.onclick = startSync;
         };
     };
 

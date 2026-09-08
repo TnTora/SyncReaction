@@ -61,7 +61,7 @@ Locate your mpv config folder. It is typically found at `~/.config/mpv/` on Linu
 To install the mpv script you can either use the precompiled binaries without having to install anything else. Otherwise you can setup a python environent to run the script. Binaries have not been thoroughly tested, open an Issue if you encounter any problem.
 
 ### Setup mpv script using compiled binaries
-- Download the build version matching your system from the Release page and extract its contents
+- Download the build version matching your system from the [Release page](https://github.com/TnTora/SyncReaction/releases) and extract its contents
 - Place the `SyncReaction` folder inside the `scripts` folder in `<mpv config directory>`. If it doesn't exist you should create it.
 
 - If you are on macOS you may need to run the following command in Terminal to allow the system to run the sctipt since it is not signed:

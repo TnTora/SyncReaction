@@ -577,15 +577,26 @@ def manualSyncCheck() -> None:
         client.setProperty_sync("addListener", "playback-time")
 
 
+STOPPING = False
+
 @mpv.on_key_press("ESC", forced=True)
 def stopScript(*, notifyClient: bool = True) -> None:
+    global STOPPING  # noqa: PLW0603
+    if STOPPING:
+        return
+
+    STOPPING = True
+
     if notifyClient:
         msg = {"type": "notice", "property": None, "value": "stopping server"}
         SyncContext.loop.call_soon_threadsafe(MpvContext.mpvQ.put_nowait, (0, msg))
+
     with open(directory / "SyncReaction_cache.json", "w") as f:
         json.dump(cache, f, indent=4)
+
     for task in asyncio.all_tasks(loop=SyncContext.loop):
-        task.cancel()
+        if not (task.cancelled() or task.done()):
+            task.cancel()
 
 
 async def main() -> None:
@@ -622,6 +633,7 @@ async def main() -> None:
             except asyncio.CancelledError:
                 pass
             mpv.terminate()
+            print("Stopped Synchronization")
 
     except OSError as error:
         print(error.strerror, flush=True)
